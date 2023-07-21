@@ -12,11 +12,7 @@ import pandas as pd
 from nltk.corpus import stopwords
 import http.client
 import re
-import csv
 
-
-
-import ssl
 nltk.download('punkt')
 #remove filler words from an example column
 nltk.download("stopwords")
@@ -129,30 +125,25 @@ def get_df():
         print("Grabbed search results")
 
 
-
-
-
-
-
     
         # Process the search results as desired        
         df = pd.DataFrame(search_results)
-        df_bart = pd.DataFrame(search_results)
-        df_bart_unlem = pd.DataFrame(search_results)
+        # df_bart = pd.DataFrame(search_results)
+        # df_bart_unlem = pd.DataFrame(search_results)
         # Extract domain names from URLs and set as the index for the dataframe
         tld_pattern = re.compile(r'\.[a-zA-Z]+$')
         df['Domain'] = df['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
         df.insert(0, 'Domain', df.pop('Domain'))
         
-        df_bart['Domain'] = df_bart['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
-        df_bart.insert(0, 'Domain', df_bart.pop('Domain'))
-        #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
-        df_bart['Text'] = df_bart['Text'].str.replace('\ufffd', '')
+        # df_bart['Domain'] = df_bart['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
+        # df_bart.insert(0, 'Domain', df_bart.pop('Domain'))
+        # #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
+        # df_bart['Text'] = df_bart['Text'].str.replace('\ufffd', '')
         
-        df_bart_unlem['Domain'] = df_bart_unlem['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
-        df_bart_unlem.insert(0, 'Domain', df_bart_unlem.pop('Domain'))
-        #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
-        df_bart_unlem['Text'] = df_bart_unlem['Text'].str.replace('\ufffd', '')
+        # df_bart_unlem['Domain'] = df_bart_unlem['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
+        # df_bart_unlem.insert(0, 'Domain', df_bart_unlem.pop('Domain'))
+        # #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
+        # df_bart_unlem['Text'] = df_bart_unlem['Text'].str.replace('\ufffd', '')
         
         #unfiltered dataframe
         print(len(df))
@@ -238,16 +229,12 @@ def get_df():
         
         df["Text"] = df["Text"].apply(lambda x: " ".join(x) if isinstance(x, list) else x)
         df["Text"] = df["Text"].apply(preprocess)
-        
-        
-        print(len(df_bart["Text"][0]))
+
         #Properly using the apply() function onto a pandas column
         #removes both filler words and special characters
         #df["Text"] = df["Text"].apply(preprocess)
         #df_bart["Text"] = df_bart["Text"].apply(bart_preprocess)
 
-        df_bart.to_csv('bart.csv')
-
-        return df_bart
+        return df
 
 
