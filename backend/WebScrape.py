@@ -15,6 +15,7 @@ import re
 import csv
 
 
+
 import ssl
 nltk.download('punkt')
 #remove filler words from an example column
@@ -27,8 +28,8 @@ import concurrent.futures
 from tqdm import tqdm
 #Working implementation
 
-def get_df():
-
+def get_df():    
+        #Remove <a> tags from search results 7/19/23
         session = requests.Session()
         retry = Retry(connect=2, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
@@ -80,11 +81,18 @@ def get_df():
                             url = urljoin(base_url, url)
                         all_urls.append(url)
         
-        
         def get_response(url):
             try:
                 response = session.get(url, verify=True, headers=headers)
                 result_soup = BeautifulSoup(response.content, "html.parser")
+        
+                
+                # Remove <a> tags and their content from the parsed HTML content
+                for a_tag in result_soup.find_all("a"):
+                    a_tag.decompose()
+        
+                    
+                # Get the clean text without <a> tags
                 text = result_soup.get_text()
                 text = ' '.join(text.split())
                 search_results.append({"Title": title, "URL": url, "Text": text})
@@ -96,6 +104,9 @@ def get_df():
                 print("Exception:", e)
                 return None
         
+        
+        
+                
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         
         for cur_url in all_urls:
@@ -106,6 +117,7 @@ def get_df():
                 )
             ]
         
+        
         results = []
         with tqdm(total=len(futures), desc="Scraping...") as pbar:
             for future in concurrent.futures.as_completed(futures):
@@ -115,11 +127,15 @@ def get_df():
         
             
         print("Grabbed search results")
-        
-        # Process the search results as desired
-        
-        pattern = r"\b(?:skip|main|content|table|menu|displayclass|pagesubpageproperty|ad|copyright|com|ssc|f|wiki|courses|course|sign|up|log|facebook|google|email|forgot|password|user|existing|manually|already|account|f|frac|cdots|hspace|mm|ikamusumefan|gif|org|https|loading|align|p|x|c|extensionprocessorqueryprovider|libretexts|pageindex|dfrac|mathrm|newcommand|norm|extensionprocessorqueryprovider|pagesubpageproperty)\b"
-        
+
+
+
+
+
+
+
+    
+        # Process the search results as desired        
         df = pd.DataFrame(search_results)
         df_bart = pd.DataFrame(search_results)
         df_bart_unlem = pd.DataFrame(search_results)
@@ -146,36 +162,89 @@ def get_df():
         
         stop_words = stopwords.words("english") #english filler words
         
+        # def preprocess(text):
+        #     '''
+        #     Input a text block and filter out unneeded characters
+        #     returns a filtered text block in the form of a str
+        #     Function filters whitespace, numbers, special characters, stopwords; handles case normalization 
+        #     '''
+        #     # Remove special characters and numbers
+        #     cleaned_text = re.sub(r"[^a-zA-Z]+", " ", text)
+            
+        #     # Convert to lowercase and split into words
+        #     words = cleaned_text.lower().split()
+            
+        #     # Remove stop words and single-character words
+        #     filtered_words = [word for word in words if word not in stop_words and len(word) > 1]
+        #     #lemmatized_text = " ".join([WordNetLemmatizer().lemmatize(word) for word in filtered_words])
+        #     filtered_string = " ".join(filtered_words)
+        #     return filtered_string
+        
+        # def bart_preprocess(text):
+        
+        #     words = text.split()
+        #     lemmatized_text = " ".join([WordNetLemmatizer().lemmatize(word) for word in words])
+        
+        #     return lemmatized_text
+
+        #Carlos implementation, removing beginning and end instances of text without "buzzword 7/14"
         def preprocess(text):
             '''
             Input a text block and filter out unneeded characters
-            returns a filtered text block in the form of a str
-            Function filters whitespace, numbers, special characters, stopwords; handles case normalization 
+            Returns a filtered text block in the form of a string
+            Function keeps punctuation, capitalization, stopwords, and special characters;
+            removes LaTeX, keeps plain English, and strips beginning and end text
             '''
-            # Remove special characters and numbers
-            cleaned_text = re.sub(r"[^a-zA-Z]+", " ", text)
-            
-            # Convert to lowercase and split into words
-            words = cleaned_text.lower().split()
-            
-            # Remove stop words and single-character words
-            filtered_words = [word for word in words if word not in stop_words and len(word) > 1]
-            lemmatized_text = " ".join([WordNetLemmatizer().lemmatize(word) for word in filtered_words])
-            
-            return lemmatized_text
+            # Remove LaTeX expressions
+            cleaned_text = re.sub(r"\$.*?\$", "", text)
         
-        def bart_preprocess(text):
+            stop_words = set(stopwords.words("english"))
+            query_words = search_query.split()
+            non_stop_word = next((word for word in query_words if word.lower() not in stop_words), None)
         
-            cleaned_text = re.sub(pattern,"",text, flags=re.IGNORECASE)
+            # Strip beginning text
+            text_words = cleaned_text.split()
+        
+            count = 0
+            start_index = 0
+            for i, word in enumerate(text_words):
+                if word.lower() == non_stop_word.lower():
+                    count += 1
+                    if count == 6:
+                        start_index = i
+                        break
+        
+            # Strip ending text
+            count = 0
+            end_index = len(text_words)
+            for i in range(len(text_words) - 1, -1, -1):
+                if text_words[i].lower() == non_stop_word.lower():
+                    count += 1
+                    if count == 6:
+                        end_index = i + 1
+                    #bulk of good information tends to be towards beginning of page. added this here for special pages that are way too long (wikipedia)
+                    elif count == 10:
+                        end_index = i + 1
+                        break
+        
+            # Hardcoding common navigation words in scraped text
+            pattern = r"\b(?:skip|main|content|table|menu|displayclass|pagesubpageproperty|ad|copyright|com|ssc|f|wiki|courses|course|sign|up|log|facebook|google|email|forgot|password|user|existing|manually|already|account|f|frac|cdots|hspace|mm|ikamusumefan|gif|org|https|loading|align|p|x|c|extensionprocessorqueryprovider|libretexts|pageindex|dfrac|mathrm|newcommand|norm|extensionprocessorqueryprovider|pagesubpageproperty|browser|firefox|install|chrome|edge|wikimedia|commonswikibookswikiquotewikiversity|t)\b"
+            cleaned_text = re.sub(pattern, "", cleaned_text, flags=re.IGNORECASE)
+            cleaned_text = " ".join(text_words[start_index:end_index])
+            
         
             return cleaned_text
+        
+        
+        df["Text"] = df["Text"].apply(lambda x: " ".join(x) if isinstance(x, list) else x)
+        df["Text"] = df["Text"].apply(preprocess)
         
         
         print(len(df_bart["Text"][0]))
         #Properly using the apply() function onto a pandas column
         #removes both filler words and special characters
-        # df["Text"] = df["Text"].apply(bart_preprocess)
-        df_bart["Text"] = df_bart["Text"].apply(bart_preprocess)
+        #df["Text"] = df["Text"].apply(preprocess)
+        #df_bart["Text"] = df_bart["Text"].apply(bart_preprocess)
 
         df_bart.to_csv('bart.csv')
 
