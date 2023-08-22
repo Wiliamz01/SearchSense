@@ -36,7 +36,7 @@ def get_df():
         session.mount('http://', adapter)
         session.mount('https://', adapter)
         # Define the search query and retrieve search results
-        search_query = input("What would you like to search up?")
+        search_query = input("Enter your search query: ")
         search_engine_url = "https://www.google.com/search?q="
         
         # Set headers to mimic a browser request
@@ -132,31 +132,13 @@ def get_df():
             
         print("Grabbed search results")
 
-
-
-
-
-
-
     
         # Process the search results as desired        
         df = pd.DataFrame(search_results)
-        df_bart = pd.DataFrame(search_results)
-        df_bart_unlem = pd.DataFrame(search_results)
         # Extract domain names from URLs and set as the index for the dataframe
         tld_pattern = re.compile(r'\.[a-zA-Z]+$')
         df['Domain'] = df['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
         df.insert(0, 'Domain', df.pop('Domain'))
-        
-        df_bart['Domain'] = df_bart['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
-        df_bart.insert(0, 'Domain', df_bart.pop('Domain'))
-        #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
-        df_bart['Text'] = df_bart['Text'].str.replace('\ufffd', '')
-        
-        df_bart_unlem['Domain'] = df_bart_unlem['URL'].apply(lambda url: re.sub(tld_pattern, '', urlparse(url).netloc.replace("www.", "")))
-        df_bart_unlem.insert(0, 'Domain', df_bart_unlem.pop('Domain'))
-        #Handles the "Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER" exception
-        df_bart_unlem['Text'] = df_bart_unlem['Text'].str.replace('\ufffd', '')
         
         #unfiltered dataframe
         print(len(df))
@@ -164,7 +146,7 @@ def get_df():
         
         
         
-        stop_words = stopwords.words("english") #english filler words
+        # stop_words = stopwords.words("english") #english filler words
         
         # def preprocess(text):
         #     '''
@@ -214,7 +196,7 @@ def get_df():
             for i, word in enumerate(text_words):
                 if word.lower() == non_stop_word.lower():
                     count += 1
-                    if count == 6:
+                    if count == 4:
                         start_index = i
                         break
         
@@ -224,10 +206,7 @@ def get_df():
             for i in range(len(text_words) - 1, -1, -1):
                 if text_words[i].lower() == non_stop_word.lower():
                     count += 1
-                    if count == 6:
-                        end_index = i + 1
-                    #bulk of good information tends to be towards beginning of page. added this here for special pages that are way too long (wikipedia)
-                    elif count == 10:
+                    if count == 2:
                         end_index = i + 1
                         break
         
