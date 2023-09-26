@@ -19,7 +19,7 @@ display all the search results based on the dataframe
 
 '''
 
-
+print("pipeline file is being read")
 #imports
 import requests #send HTTP requests to web pages and retrieve their content
 from requests.adapters import HTTPAdapter
@@ -313,3 +313,5 @@ def get_result():
         """)
     
     return df
+
+get_result()
