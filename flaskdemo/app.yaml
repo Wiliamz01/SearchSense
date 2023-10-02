@@ -1,19 +1,14 @@
-runtime: python39  # Specifies the runtime. Ensure that it is compatible with your Python version.
+runtime: python39
 
 
-instance_class: F2  # Specifies the instance class. You can choose a different class based on your needs.
+instance_class: F2 
 automatic_scaling:
-  target_cpu_utilization: 0.65  # Specifies the target CPU utilization for automatic scaling.
-  min_instances: 1  # Specifies the minimum number of instances for automatic scaling.
-  max_instances: 10  # Specifies the maximum number of instances for automatic scaling.
+  target_cpu_utilization: 0.65 
+  min_instances: 1  
+  max_instances: 5
 
-entrypoint: gunicorn -b :$PORT app:app  # Specifies the entry point for the application.
-
-# env_variables:  # Specifies any environment variables your application might need.
-#   SECRET_KEY: 'your_secret_key'
+entrypoint: gunicorn -b :$PORT app:app 
 
 handlers:
 - url: /static
   static_dir: static
-- url: /.*
-  script: auto
