@@ -1,0 +1,12 @@
+Flask==2.0.2
+requests
+BeautifulSoup4
+pandas
+nltk
+urllib3
+transformers
+torch
+gunicorn
+tqdm
+pip
+werkzeug

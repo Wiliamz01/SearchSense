@@ -1,75 +1,44 @@
-'''
-
-do the web scrape
-after getting that, add two lines where query = input
-ask user
-
-
-get the dataframe
-
-deploy the model
-run through the model
-
-generate scores for each entry
-create a new column and apply function to new column
-
-sort the data frame in any particular order
-
-display all the search results based on the dataframe
-
-'''
-
-print("pipeline file is being read")
+import logging
+logging.info("pipelinetest.py files is being read")
 #imports
-import requests #send HTTP requests to web pages and retrieve their content
-from requests.adapters import HTTPAdapter
+from flask import Flask, request, jsonify
+import requests
 from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import TfidfVectorizer
 import nltk
-from urllib.parse import urlparse, urljoin
-import pandas as pd
 from nltk.corpus import stopwords
-import http.client
+import pandas as pd
+from urllib.parse import urlparse, urljoin
 import re
-
-
-nltk.download('punkt')
-#remove filler words from an example column
-nltk.download("stopwords")
-nltk.download('wordnet')
-
-
-import concurrent.futures
-from tqdm import tqdm
-#Working implementation
-
-#model imports
 import torch
-
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")  # Use the first available GPU (index 0)
-else:
-    device = torch.device("cpu")  # Use CPU if no GPU is available
-
-print(f"Using device: {device}")
-
 from transformers import DistilBertForSequenceClassification, DistilBertTokenizer
+import concurrent.futures
+from requests.adapters import HTTPAdapter
+
+
+# Set up Flask app
+app = Flask(__name__)
+
+# Load model and tokenizer
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+
 #Load the model
-model = DistilBertForSequenceClassification.from_pretrained("C:/Users/William Zhang/OneDrive/Desktop/Search_Sense_Model").to(device)
+model = DistilBertForSequenceClassification.from_pretrained("gs://my_model_searchsense/my_model/").to(device)#DistilBertForSequenceClassification.from_pretrained("/Users/carlosg/Desktop/SearchSense/backend/final_pipeline/my_model").to(device) #DistilBertForSequenceClassification.from_pretrained("gs://my_model_searchsense/my_model/").to(device)
 tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+#tokenizer = DistilBertTokenizer.from_pretrained('/Users/carlosg/Desktop/SearchSense/backend/final_pipeline/my_tokenizer') #DistilBertTokenizer.from_pretrained('gs://my_model_searchsense/my_tokenizer/')
+logging.info("model and tokenizer has been loaded")#imports
 
 
-def get_result():    
+def get_result(search_query):    
     #Remove <a> tags from search results 7/19/23
     session = requests.Session()
     adapter = HTTPAdapter()
     session.mount('http://', adapter)
     session.mount('https://', adapter)
     # Define the search query and retrieve search results
-    search_query = input("Enter your search query: ")
     search_engine_url = "https://www.google.com/search?q="
 
     # Set headers to mimic a browser request
@@ -156,14 +125,12 @@ def get_result():
 
 
     results = []
-    with tqdm(total=len(futures), desc="Scraping...") as pbar:
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            results.append(results)
-            pbar.update(1)
+    for future in concurrent.futures.as_completed(futures):
+        result = future.result()
+        results.append(results)
 
-
-    print("Search results retrieved successfully")
+    #print("Search results retrieved successfully")
+    logging.info("Search results retrieved successfully")
 
 
     # Process the search results as desired        
@@ -312,6 +279,18 @@ def get_result():
         --------------------------------------------------------
         """)
     
-    return df
+    return df.to_json(orient = "records")
 
-get_result()
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        # Extract search query from request
+        search_query = request.json["search_query"]
+        # Use your get_result function with the provided search_query
+        results = get_result(search_query) 
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)
